@@ -9,7 +9,7 @@
 namespace zm
 {
 template <typename T>
-class Singleton : NonCopyAble
+class Singleton : NonCopyable
 {
 public:
 

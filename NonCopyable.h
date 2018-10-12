@@ -2,15 +2,15 @@
 
 namespace zm
 {
-class NonCopyAble
+class NonCopyable
 {
 protected:
-  constexpr NonCopyAble() = default;
-  ~NonCopyAble() = default;
+  constexpr NonCopyable() = default;
+  ~NonCopyable() = default;
 
-  NonCopyAble(const NonCopyAble&) = delete;
-  NonCopyAble& operator=(const NonCopyAble&) = delete;
-  NonCopyAble(NonCopyAble&&) = delete;
-  NonCopyAble& operator=(NonCopyAble&&) = delete;
+  NonCopyable(const NonCopyable&) = delete;
+  NonCopyable& operator=(const NonCopyable&) = delete;
+  NonCopyable(NonCopyable&&) = delete;
+  NonCopyable& operator=(NonCopyable&&) = delete;
 };
 }

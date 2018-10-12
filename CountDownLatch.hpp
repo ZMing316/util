@@ -9,7 +9,7 @@
 
 namespace zm
 {
-class CountDownLatch : NonCopyAble
+class CountDownLatch : NonCopyable
 {
 public:
   explicit
