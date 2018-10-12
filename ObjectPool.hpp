@@ -17,6 +17,9 @@ public:
   struct ObjectHolder
   {
     ObjectHolder(HolderPtr&& ptr);
+    bool isNull() const {
+      return object_ == nullptr;
+    }
     T& operator*() const;
 
   private:
@@ -77,6 +80,7 @@ template <typename T>
 T&
   ObjectPool<T>::ObjectHolder::operator*() const
 {
+  assert(object_ != nullptr);
   return *object_;
 }
 
