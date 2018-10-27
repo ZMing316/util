@@ -11,7 +11,7 @@ class WeakCallback
 public:
   WeakCallback(std::weak_ptr<CLASS> object, std::function<void(CLASS*, ARGS ...)> func)
     : object_(object)
-    , func_(func)
+    , func_(std::move(func))
   { }
 
   void
