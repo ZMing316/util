@@ -12,57 +12,60 @@ namespace zm
 template <typename T>
 class ObjectPool : public Singleton<ObjectPool<T>>
 {
-  using HolderPtr = std::unique_ptr<T, std::function<void(T*)>>;
+  using HolderPtr = std::unique_ptr<T, std::function<void(T *)>>;
+
 public:
   struct ObjectHolder
   {
-    ObjectHolder(HolderPtr&& ptr);
-    bool isNull() const {
+    ObjectHolder(HolderPtr &&ptr);
+    bool isNull() const
+    {
       return object_ == nullptr;
     }
-    T& operator*() const;
+    T &operator*() const;
 
   private:
     HolderPtr object_;
   };
 
-  template <typename ...Args>
-  ObjectHolder acquire(Args&& ...args);
+  template <typename... Args>
+  ObjectHolder acquire(Args &&... args);
 
-  explicit ObjectPool(int init_size, int increase_chunk_size);
+  explicit ObjectPool(int init_size, int increase_chunk_size, size_t MAX_MEMORY_LIMIT);
   ~ObjectPool();
 
   size_t useCount() const;
   size_t totalCount() const;
 
 private:
-  using BookingType = typename std::unordered_map<T*, bool>::value_type;
+  size_t memory() const { return totalCOunt() * size_of(T); }
+  using BookingType = typename std::unordered_map<T *, bool>::value_type;
 
-  template <typename ...Args>
-  T* acquireImpl(Args&& ... args);
-  void release(T* object_ptr);
+  template <typename... Args>
+  T *acquireImpl(Args &&... args);
+  void release(T *object_ptr);
   void allocate(int size);
   void tryAllocate(int size);
-  T* getFree();
+  T *getFree();
 
   size_t count_{};
   std::mutex mutex_;
-  std::vector<void*> objectChunk_;
-  std::unordered_map<T*, bool> object_;
+  std::vector<void *> objectChunk_;
+  std::unordered_map<T *, bool> object_;
   int increaseChunkSize_;
+  const size_t K_MAX_MEMROY_LIMIT;
 };
 
 template <typename T>
-template <typename ... Args>
-T*
-  ObjectPool<T>::acquireImpl(Args&&... args)
+template <typename... Args>
+T *ObjectPool<T>::acquireImpl(Args &&... args)
 {
   std::lock_guard<std::mutex> lock(mutex_);
   tryAllocate(increaseChunkSize_);
   auto object_ptr = getFree();
   if (object_ptr)
   {
-    new(object_ptr) T(std::forward<Args>(args)...);
+    new (object_ptr) T(std::forward<Args>(args)...);
     ++count_;
     object_[object_ptr] = true;
   }
@@ -71,38 +74,54 @@ T*
 }
 
 template <typename T>
-ObjectPool<T>::ObjectHolder::ObjectHolder(HolderPtr&& ptr)
+ObjectPool<T>::ObjectHolder::ObjectHolder(HolderPtr &&ptr)
 {
   object_.swap(ptr);
 }
 
 template <typename T>
-T&
-  ObjectPool<T>::ObjectHolder::operator*() const
+T &
+    ObjectPool<T>::ObjectHolder::operator*() const
 {
   assert(object_ != nullptr);
   return *object_;
 }
 
 template <typename T>
-template <typename ... Args>
+template <typename... Args>
 typename ObjectPool<T>::ObjectHolder
-  ObjectPool<T>::acquire(Args&&... args)
+ObjectPool<T>::acquire(Args &&... args)
 {
-  auto ptr = acquireImpl(std::forward<Args>(args)...);
-  return ObjectHolder(std::unique_ptr<T, std::function<void(T*)>>(ptr,
-                                                                  [this](T* ptr)
-                                                                  {
-                                                                    if (ptr)
-                                                                    {
-                                                                      this->release(ptr);
-                                                                    }
-                                                                  }));
+  using Deleter = std : function<void(T *) noexcept>;
+  T *ptr = nullptr;
+  Deleter deleter;
+
+  if (memory() > K_MAX_MEMROY_LIMIT)
+  {
+    ptr = new T(std::forward<Args>(args)...);
+    deleter = [this](T *ptr) {
+      if (ptr)
+      {
+        delete ptr;
+      }
+    }
+  }
+  else
+  {
+    ptr = acquireImpl(std::forward<Args>(args)...);
+    deleter = [this](T *ptr) {
+      if (ptr)
+      {
+        this->release(ptr);
+      }
+    }
+  }
+
+  return ObjectHolder(std::unique_ptr<T, std::function<void(T *)>>(ptr, deleter));
 }
 
 template <typename T>
-void
-  ObjectPool<T>::release(T* object_ptr)
+void ObjectPool<T>::release(T *object_ptr)
 {
   if (object_ptr)
   {
@@ -121,8 +140,8 @@ void
 }
 
 template <typename T>
-ObjectPool<T>::ObjectPool(int init_size, int increase_chunk_size)
-  : increaseChunkSize_(increase_chunk_size)
+ObjectPool<T>::ObjectPool(int init_size, int increase_chunk_size /* recommend 4k % sizeof(T) */, size_t MAX_MEMORY_LIMIT)
+    : increaseChunkSize_(increase_chunk_size), K_MAX_MEMORY_LIMIT(MAX_MEMORY_LIMIT - sizeof(T))
 {
   allocate(init_size);
 }
@@ -133,35 +152,34 @@ ObjectPool<T>::~ObjectPool()
   assert(count_ == 0);
   std::for_each(objectChunk_.begin(),
                 objectChunk_.end(),
-                [](void* raw)
-                {
+                [](void *raw) {
                   operator delete[](raw);
                 });
 }
 
 template <typename T>
 size_t
-  ObjectPool<T>::useCount() const
+ObjectPool<T>::useCount() const
 {
   return count_;
 }
 
 template <typename T>
 size_t
-  ObjectPool<T>::totalCount() const
+ObjectPool<T>::totalCount() const
 {
+  std::lock_guard<std::mutex> lock(mutex_);
   return object_.size();
 }
 
 template <typename T>
-void
-  ObjectPool<T>::allocate(int size)
+void ObjectPool<T>::allocate(int size)
 {
   auto raw = operator new[](sizeof(T) * size, std::nothrow_t());
   if (raw)
   {
     objectChunk_.push_back(raw);
-    auto ptr = static_cast<T*>(raw);
+    auto ptr = static_cast<T *>(raw);
     for (auto offset = 0; offset < size; ++offset)
     {
       object_.emplace(std::make_pair(ptr + offset, false));
@@ -170,11 +188,9 @@ void
 }
 
 template <typename T>
-void
-  ObjectPool<T>::tryAllocate(int size)
+void ObjectPool<T>::tryAllocate(int size)
 {
-  auto const pred = [](const BookingType& ele)
-  {
+  auto const pred = [](const BookingType &ele) {
     return !ele.second;
   };
 
@@ -186,11 +202,9 @@ void
 }
 
 template <typename T>
-T*
-  ObjectPool<T>::getFree()
+T *ObjectPool<T>::getFree()
 {
-  auto const pred = [](const BookingType& ele)
-  {
+  auto const pred = [](const BookingType &ele) {
     return !ele.second;
   };
 
@@ -199,4 +213,4 @@ T*
     return nullptr;
   return unused->first;
 }
-}
+} // namespace zm
