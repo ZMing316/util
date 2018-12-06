@@ -10,7 +10,7 @@ class Builder
     using pointer = T*;
 
     template <typename... ARGS>
-    static pointer build(ARGS &&... args) noexcept
+    pointer build(ARGS &&... args) noexcept
     {
         auto p = allocator_.allocate(1);
         if (p)
@@ -20,7 +20,7 @@ class Builder
         return p;
     }
 
-    static void release(pointer p) noexcept
+    void release(pointer p) noexcept
     {
         if (p)
         {
@@ -30,11 +30,8 @@ class Builder
     }
 
   private:
-    static Allocator allocator_;
+    Allocator allocator_;
 };
-
-template <typename T, typename Allocator>
-Allocator Builder<T, Allocator>::allocator_;
 
 template <typename CLASS, typename... ARGS>
 class IBuilder
