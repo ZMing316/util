@@ -30,11 +30,11 @@ class Builder
     }
 
   private:
-    static thread_local Allocator allocator_;
+    static Allocator allocator_;
 };
 
 template <typename T, typename Allocator>
-thread_local Allocator Builder<T, Allocator>::allocator_;
+Allocator Builder<T, Allocator>::allocator_;
 
 template <typename CLASS, typename... ARGS>
 class IBuilder
