@@ -1,5 +1,6 @@
 #include <unordered_map>
 #include <mutex>
+#include <tuple>
 
 #include "Builder.hpp"
 
@@ -29,7 +30,7 @@ class ObjectFactory
 
     template <typename Builder>
     auto
-    registerBuilder(const ID &id, std::shared_ptr<Builder> &&builder) -> typename std::enable_if<std::is_base_of<IBuilder<BASE, ARGS...>, Builder>::value, void>::type
+    registerBuilder(ID&& id, std::shared_ptr<Builder> &&builder) -> typename std::enable_if<std::is_base_of<IBuilder<BASE, ARGS...>, Builder>::value, void>::type
     {
         assert(builder.get() != nullptr);
         if (builders_.find(id) != builders_.cend())
@@ -37,7 +38,8 @@ class ObjectFactory
             throw std::logic_error("ID has already be registed, if you want to continue please remove first.");
         }
         std::lock_guard<std::mutex> lock(mutex_);
-        std::swap(builders_[id], builder);
+        builders_.emplace(std::make_pair(std::forward<ID>(id), std::move(builder)));
+        //std::swap(builders_[id], builder);
     }
 
   private:
