@@ -45,5 +45,5 @@ class ObjectFactory
   private:
     std::unordered_map < ID, std::shared_ptr<IBuilder<BASE, ARGS...>> builders_;
     std::mutex mutex_;
-}
+};
 } // namespace zm

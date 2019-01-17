@@ -1,6 +1,8 @@
 #pragma once
 #include <map>
 
+namespace zm
+{
 template <typename T, typename U, typename... Args>
 struct MultiLevelMap
 {
@@ -16,3 +18,5 @@ struct MultiLevelMap<T, U>
 
 template <typename ...Args>
 using MultiLevelMap_t = typename MultiLevelMap<Args...>::type; 
+
+}

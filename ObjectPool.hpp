@@ -129,7 +129,7 @@ void ObjectPool<T>::release(T *object_ptr)
     auto iterator = object_.find(object_ptr);
     if (iterator != object_.cend())
     {
-      if (std::is_destructible<T>::value && std::is_class<T>::value)
+      if constexpr (std::is_destructible<T>::value && std::is_class<T>::value)
       {
         iterator->first->~T();
       }

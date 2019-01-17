@@ -1,7 +1,6 @@
 #pragma once
 
-namespace zm
-{
+
 #include <atomic>
 #include <deque>
 #include <mutex>
@@ -9,6 +8,8 @@ namespace zm
 
 #include "NonCopyable.h"
 
+namespace zm
+{
 template <typename T, class Allocator = std::allocator<T>>
 class ThreadSafeQueue : public NonCopyable
 {

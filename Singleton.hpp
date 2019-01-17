@@ -68,14 +68,14 @@ private:
   static void
   init(Args&&... args)
   {
-    value_ = typename CreatePolicy<T>::create(std::forward<Args>(args)...);
+    value_ = template CreatePolicy<T>::create(std::forward<Args>(args)...);
     assert(value_ != nullptr);
     std::atexit(destory);
   }
 
   static void destroy()
   {
-    typename CreatePolicy<T>::destroy(value_);
+    template CreatePolicy<T>::destroy(value_);
   }
 
 private:
