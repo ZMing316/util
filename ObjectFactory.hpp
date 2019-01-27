@@ -38,7 +38,7 @@ class ObjectFactory
             throw std::logic_error("ID has already be registed, if you want to continue please remove first.");
         }
         std::lock_guard<std::mutex> lock(mutex_);
-        builders_.emplace(std::make_pair(std::forward<ID>(id), std::move(builder)));
+        builders_.emplace(std::forward<ID>(id), std::move(builder));
         //std::swap(builders_[id], builder);
     }
 
