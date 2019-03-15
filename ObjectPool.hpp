@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <vector>
+#include <type_traits>
 
 #include "Singleton.hpp"
 
@@ -175,7 +176,8 @@ ObjectPool<T>::totalCount() const
 template <typename T>
 void ObjectPool<T>::allocate(int size)
 {
-  auto raw = operator new[](sizeof(T) * size, std::nothrow_t());
+  using NT = typename std::aligned_storage<sizeof(T), alignof(T)>::type;
+  auto raw = operator new[](sizeof(NT) * size, std::nothrow_t());
   if (raw)
   {
     objectChunk_.push_back(raw);
